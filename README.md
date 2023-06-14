@@ -2,7 +2,7 @@
 
 - Script to explore projects that use C++ modules from the [awesome-cpp](https://github.com/fffaraz/awesome-cpp)
 
-Investigation involves examining popular C++ projects listed in the README of the [Awesome Cpp](https://github.com/fffaraz/awesome-cpp) repository, which provides links to various open-source C++ projects. The README of Awesome Cpp contains XXX links to C++ open-source projects. These projects were then individually searched using the GitHub Search API. The objective was to determine whether these well-known projects were utilizing C++ modules.
+Investigation involves examining popular C++ projects listed in the README of the [Awesome Cpp](https://github.com/fffaraz/awesome-cpp) repository, which provides links to various open-source C++ projects. The README of Awesome Cpp contains 629 links to C++ open-source projects. These projects were then individually searched using the GitHub Search API. The objective was to determine whether these well-known projects were utilizing C++ modules.
 
 Each API call contains a query of this form.
 

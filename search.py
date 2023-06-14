@@ -34,12 +34,13 @@ class URLGenerator:
         return res
 
 class Result:
-    def __init__(self, text: str, url: str, endpoint: str, has_module: bool, json: str):
+    def __init__(self, text: str, url: str, endpoint: str, has_module: bool, json: str, search_endpoint: str):
         self.text = text
         self.url = url
         self.endpoint = endpoint
         self.has_module = has_module
         self.json = json
+        self.search_endpoint = search_endpoint
 
 def read_README() -> List:
     with open('../awesome-cpp/README.md', 'r') as fin:
@@ -60,7 +61,7 @@ def read_README() -> List:
     return links
 
 def create_queries(github_urls):
-    queries = set()
+    queries = dict()
 
     for url in github_urls:
         parsed_url = urlparse(url["url"])
@@ -76,21 +77,23 @@ def create_queries(github_urls):
         else:
             generator.org = splitedPath[0]
         
-        queries.add((generator.query(), url["text"], url["url"]))
+        queries[generator.query()] = (url["text"], f"https://github.com/{splitedPath[0]}")
+        # queries.add((generator.query(), url["text"], url["url"]))
     
     return queries
 
 def request_search_api():
     results = []
-    for i, q in enumerate(queries):
+    count = 0
+    for k, v in queries.items():
         # The REST API has a custom rate limit for searching. For authenticated requests, you can make up to 30 requests per minute for all search endpoints except for the "Search code" endpoint. 
         # The "Search code" endpoint requires you to authenticate and limits you to 10 requests per minute. 
         # For unauthenticated requests, the rate limit allows you to make up to 10 requests per minute.
         # ref: https://docs.github.com/en/rest/search?apiVersion=2022-11-28
-        if i+1 != 1 and (i+1) % 10 == 0:
-            time.sleep(61)
+        if count != 0 and count % 9 == 0:
+            time.sleep(61)        
 
-        query = q[0]
+        query = k
         url = "https://api.github.com/search/code?q={}".format(query)
 
         headers = {
@@ -102,16 +105,23 @@ def request_search_api():
         jsonData = response.json()
         
         if response.status_code == 200:
-            print(i, jsonData["total_count"], q)
-            results.append(Result(text = q[1], url = q[2], endpoint=url, has_module = jsonData["total_count"] != 0, json=json.dumps(jsonData)))
+            res = Result(text = v[0], 
+                         url = v[1], 
+                         endpoint=url, 
+                         has_module = jsonData["total_count"] != 0, 
+                         json=json.dumps(jsonData), 
+                         search_endpoint="https://github.com/search?q=" + query)
+            results.append(res)
+            print(count, "hasModule", res.has_module, res.search_endpoint)
         else:
             print("Error:", response.status_code, jsonData["message"])
-    
+        count += 1
+
     return results
 
 def create_csv(results):
     csv_file = "results.csv"
-    fieldnames = ["text", "url", "endpoint", "has_module", "json"]
+    fieldnames = ["text", "url", "endpoint", "has_module", "json", "search_endpoint"]
 
     with open(csv_file, mode="w", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=fieldnames)
@@ -123,7 +133,8 @@ def create_csv(results):
                 "url": result.url,
                 "has_module": result.has_module,
                 "endpoint": result.endpoint,
-                "json": result.json
+                "json": result.json,
+                "search_endpoint": result.search_endpoint
             })
 
 # read and extract url from Awesome cpp repository's README
@@ -134,6 +145,7 @@ github_urls = read_README()
 # So, if the projects contain files for modules, we can say that they use C++20 Modules.
 queries = create_queries(github_urls)
 
+# print(queries)
 # request search API and get the response
 results = request_search_api()
 
